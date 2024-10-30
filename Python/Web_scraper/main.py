@@ -3,7 +3,6 @@ from bs4 import BeautifulSoup
 import sys
 
 emails=[]
-sites=[]
 already_visited=set()
 header={
     'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0",
@@ -28,7 +27,6 @@ def link_follow(start):
             for x in bs4.find_all('a'):
                 href=x.get('href')
                 if href:
-                    sites.append(href)
                     if href.startswith("/"):
                         href=f"{sys.argv[1]+href}"
                     elif href.startswith("mailto:"):
@@ -44,7 +42,7 @@ def link_follow(start):
 
 try:
     link_follow(sys.argv[1])
-    print(already_visited)
+    
     site_name=sys.argv[1].split("/")[2]
 
     if len(site_name.split("."))==2:
