@@ -153,5 +153,5 @@ try:
                 f.write(f"{site};{subsite};{email};{file}\n")
 except IndexError as e:
     if len(sys.argv)==2:
-        exit(f"Hiba lépett fel. Az oldal lehet, hogy védve van.({e})")
+        exit(f"Hiba lépett fel. Az oldal lehet, hogy védve van.")
     exit(f"Használat: {sys.argv[0]} http(s)://host.com")
