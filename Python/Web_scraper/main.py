@@ -4,9 +4,14 @@ import sys
 import time
 import re
 
+if len(sys.argv)<2:
+    exit(f"Használat: {sys.argv[0]} http(s)://host.com")
+
+
+
 emails=[]
 files=[]
-file_exts=(".jpg",".png",".pdf",".mp4",".mp3",".webp")
+file_exts=(".jpg",".png",".pdf",".mp4",".mp3",".webp",".doc",".docx",".xlsx")
 subsites=set()
 already_visited=set()
 header={
@@ -35,7 +40,7 @@ def link_follow(start):
             bs4=BeautifulSoup(r.content, "html5lib")
             for x in bs4.find_all('a'):
                 href=x.get('href')
-
+                
                 if href:
                     if href.startswith("/"):
                         href=sys.argv[1]+href
@@ -46,8 +51,7 @@ def link_follow(start):
                     elif is_valid_email(href):
                         if href not in emails:
                             emails.append(href)
-                        continue
-                    
+                        continue         
                     if href.endswith(file_exts):
                             if href.startswith("https") or href.startswith("http"):
                                 if href not in files:
@@ -75,9 +79,9 @@ def link_follow(start):
                                 href=sys.argv[1]+"/"+href
                             else:
                                 href=sys.argv[1]+href
-                    if href.startswith("#"):
+                    if href.startswith(("#","javascript")):
                         continue
-                
+                    
                 if not href or href in already_visited:
                     continue
                 
@@ -151,7 +155,8 @@ try:
                 email = emails[x]
                 file = files[x]
                 f.write(f"{site};{subsite};{email};{file}\n")
+    except UnicodeEncodeError as e:
+        print(f"Hiba történt : {e}")
+        print(already_visited, subsites, emails, files)
 except IndexError as e:
-    if len(sys.argv)==2:
-        exit(f"Hiba lépett fel. Az oldal lehet, hogy védve van.")
-    exit(f"Használat: {sys.argv[0]} http(s)://host.com")
+    exit(f"Hiba lépett fel. Az oldal lehet, hogy védve van.({e})")
