@@ -65,6 +65,7 @@ class modok:
 
 
 lehetseges_modok={
+    "-h": "Segítség",
     "-s": "Aktív eszközök",
     "-p": "Gyakori portok",
     "-pa": "Összes port",
@@ -72,13 +73,13 @@ lehetseges_modok={
 }
 exit_text="""
     Módok:
+        -h: Kiírja ezt az segítő szöveget.
         -s: Kiírja az aktív eszközöket a hálózaton(csak LAN hálózat! nem párosítható -p -vel!).
         -p: Kiírja az aktív portokat egy adott IP címen(nem párosítható -s -el!).
         -a: Szkennel minden lehetséges portot(nem párosítható -s -el!).
         --show-all: Kiírja a zárt és nyitott portokat is(nem párosítható -s -el!).
     Használat: scan.py <mode> <ip_range>
     Például: scan.py -s 192.168.1.0/24"""
-
 
 
 if len(sys.argv)<=2:
