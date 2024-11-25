@@ -1,78 +1,105 @@
 from scapy.all import Ether, ARP, srp, sr, IP, TCP
 import sys
 
-modok=["s","p","a"]
-common_ports=[21,22,23,25,53,80,110,443,3306]
+class modok:
+    def __init__(self, mode):
+        self.mode = mode
+    
+    def scan(ip_range):
+        devices = {}
+        ether = Ether(dst="ff:ff:ff:ff:ff:ff")
+        arp = ARP(pdst=ip_range.strip())
+        packet = ether / arp
+        rec, _ = srp(packet, timeout=10, verbose=False) 
+        for x in range(len(rec)):
+            devices[rec[x][1].src] = rec[x][1].psrc # <== rec: lista amiben soronként értékpárok vannak(tuple) : (keres, valasz)
+        print("\nARP Szkennelés Eredmények (Aktív Eszközök):")
+        for mac, ip in devices.items():
+            print(f"\t{mac} : {ip}")
+
+    def port_scan(target, all, showall):
+        ports = {}
+        ports_to_scan=range(1,65535)
+        common_ports=[20,21,22,23,25,53,80,110,119,123,143,443,465,563,989,990,993,995,3306]
+
+        try:
+            ip = IP(dst=target)
+            if all:
+                tcp = TCP(dport=ports_to_scan, flags="S")
+            else:
+                tcp = TCP(dport=common_ports, flags="S")
+            packet = ip / tcp
+            ans, _ = sr(packet, verbose=False, timeout=2)
+        except Exception as e:
+            exit(f"Nem sikerült a címet érvényesíteni {target} : {e}")
+
+        for _, answered in ans:
+            if all:
+                if (answered[TCP].sport in ports_to_scan) and (answered[TCP].flags == 0x12):
+                    ports[str(answered[TCP].sport)] = "nyitott"
+                else:
+                    if showall:
+                        ports[str(answered[TCP].sport)] = "zárt"
+                    else:
+                        continue
+
+            else:
+                if (answered[TCP].sport in common_ports) and (answered[TCP].flags == 0x12):
+                    ports[str(answered[TCP].sport)] = "nyitott"
+                else:
+                    if showall:
+                        ports[str(answered[TCP].sport)] = "zárt"
+                    else:
+                        continue
+
+        vanenyitott=False
+        for port, state in ports.items():
+            if state == "nyitott":
+                vanenyitott=True
+        if vanenyitott:
+            print(f"\nNyitott portok: {target}\n" if len(target.split("."))>3 else f"\nNyitott portok: {target}({ans[0][1].src})\n")
+            for port, state in ports.items():
+                print(f"\t{port}\t{state}")
+        else:
+            print("Nincs nyitott port.")
+
+
+lehetseges_modok={
+    "-s": "Aktív eszközök",
+    "-p": "Gyakori portok",
+    "-pa": "Összes port",
+    "--show-all": "Zárt portok is"
+}
 exit_text="""
     Módok:
         -s: Kiírja az aktív eszközöket a hálózaton(csak LAN hálózat! nem párosítható -p -vel!).
         -p: Kiírja az aktív portokat egy adott IP címen(nem párosítható -s -el!).
-        -a: Kiír minden információt(nem párosítható -s -el!).
+        -a: Szkennel minden lehetséges portot(nem párosítható -s -el!).
+        --show-all: Kiírja a zárt és nyitott portokat is(nem párosítható -s -el!).
     Használat: scan.py <mode> <ip_range>
-    Például: scan.py scan 192.168.1.0/24"""
+    Például: scan.py -s 192.168.1.0/24"""
 
 
 
 if len(sys.argv)<=2:
     exit(exit_text)
-for x in sys.argv[1]:
-    if x not in modok and x!="-":
+for x in sys.argv[1:-1]:
+    if x not in lehetseges_modok.keys():
         exit(exit_text)
 
-devices = {}
 
-def scan(ip_range):
-
-    ether = Ether(dst="ff:ff:ff:ff:ff:ff")
-    arp = ARP(pdst=ip_range)
-    packet = ether / arp
-    rec, _ = srp(packet, timeout=10, verbose=False) 
-    for x in range(len(rec)):
-        devices[rec[x][1].src] = rec[x][1].psrc # <== rec: lista amiben soronként értékpárok vannak(tuple) : (keres, valasz)
-    print("\nARP Szkennelés Eredmények (Aktív Eszközök):")
-    for mac, ip in devices.items():
-        print(f"\t{mac} : {ip}")
-
-ports={}
-
-def port_scan(ip_range, all):
-    try:
-        ip = IP(dst=ip_range)
-        tcp = TCP(dport=common_ports,flags="S")
-        packet = ip / tcp
-        ans, unans = sr(packet, verbose=False, timeout=2)
-    except Exception as e:
-        exit(f"Nem sikerült a címet érvényesíteni {ip_range} : {e}")
-    
-    ans_len=len(ans)
-    unans_len=len(unans)
-    n=0
-    for x in range(len(common_ports)):
-        port=common_ports[x]
-        if x+1<=ans_len:
-            ports[str(ans[x][1].sport)] = "nyitott"
-        elif x+1>ans_len and unans_len!=0:
-            ports[str(unans[n][1].dport)] = "zárt"
-            n+=1
-
-    if len(ports)!=0:
-        print(f"\nNyitott portok: {ip_range}\n" if len(ip_range.split("."))>3 else f"\nNyitott portok: {ip_range}({ans[0][1].src})\n")
-        for port, state in ports.items():
-            if all:
-                print(f"\t{port}\t{state}")
-            elif all == False:
-                if state == "nyitott":
-                    print(f"\t{port}\t{state}")
-        
-    else:
-        print("Nincs nyitott port.")
-        
-if ("p" in sys.argv[1]) and ("s" not in sys.argv[1]):
-    if ("a" in sys.argv[1]):
-        port_scan(sys.argv[2], all=True)
-    else:
-        port_scan(sys.argv[2], all=False)
-elif ("s" in sys.argv[1]) and ("p" not in sys.argv[1]):
-    scan(sys.argv[2])
-else:
-    exit("p és s opciót egyszerre nem választhatja!")
+for x in sys.argv[1:]:
+    if ["-s"] not in sys.argv:
+        if x == "-p":
+            if "--show-all" in sys.argv:
+                modok.port_scan(target=sys.argv[-1], all=False, showall=True)
+            else:
+                modok.port_scan(target=sys.argv[-1], all=False, showall=False)
+        elif x == "-pa":
+            if "--show-all" in sys.argv:
+                modok.port_scan(target=sys.argv[-1], all=True, showall=True)
+            else:
+                modok.port_scan(target=sys.argv[-1], all=True, showall=False)
+    if ["-p", "-pa", "--show-all"] not in sys.argv:
+        if x == "-s":
+            modok.scan(ip_range=sys.argv[-1])
